@@ -1,0 +1,23 @@
+{
+  "name": "cloudhost",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CloudHost - Plataforma completa de alojamiento web y dominios",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "start": "cd backend && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "test": "cd backend && npm test && cd ../frontend && npm test",
+    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
+    "seed": "cd backend && npm run seed",
+    "migrate": "cd backend && npm run migrate"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
