@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
+import jwt from 'jsonwebtoken';
 import { createServer } from 'http';
 import { config } from './config';
 import { connectDatabase } from './config/database';
@@ -19,7 +20,10 @@ const app = express();
 const httpServer = createServer(app);
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: [config.frontendUrl, 'https://cloudhostprueba.duckdns.org', 'https://abraham847.github.io'], credentials: true }));
+app.use(cors({
+  origin: [config.frontendUrl, 'http://localhost:5173', 'https://cloudhostprueba.duckdns.org'],
+  credentials: true,
+}));
 app.use(compression());
 app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }));
 app.use(generalLimiter);
@@ -41,7 +45,21 @@ app.use('/api/deployments', deployRoutes);
 app.get('/site/:siteId', serveSite);
 app.get('/site/:siteId/*', serveSite);
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', authenticateUploads, express.static('uploads'));
+
+function authenticateUploads(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const token = req.query.token as string || req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'No autorizado' });
+  try {
+    const decoded = jwt.verify(token, config.jwt.secret) as jwt.JwtPayload;
+    const userPath = req.path.startsWith('/users/');
+    if (userPath) {
+      const userIdFromPath = req.path.split('/')[2];
+      if (decoded.id !== userIdFromPath) return res.status(403).json({ error: 'Acceso denegado' });
+    }
+    next();
+  } catch { res.status(401).json({ error: 'Token inválido' }); }
+}
 
 app.use(notFoundHandler);
 app.use(errorHandler);

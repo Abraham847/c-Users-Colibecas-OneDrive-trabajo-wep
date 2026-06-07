@@ -16,17 +16,22 @@ export class FileService {
     }
   }
 
+  static userDir(userId: string) {
+    const dir = path.join(UPLOAD_DIR, 'users', userId);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    return dir;
+  }
+
   static getStorage(destination: string = 'general') {
     const dest = path.resolve(UPLOAD_DIR, destination);
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-
     return multer.diskStorage({
       destination: (req, file, cb) => {
         if (file.fieldname === 'files') {
           const fullPath = path.resolve(dest, file.originalname);
-          if (!fullPath.startsWith(dest)) return cb(new Error('Ruta inválida'));
+          if (String(fullPath).indexOf(String(dest)) !== 0) return cb(new Error('Ruta inválida'));
           if (!fs.existsSync(path.dirname(fullPath))) fs.mkdirSync(path.dirname(fullPath), { recursive: true });
           cb(null, path.dirname(fullPath));
         } else {
@@ -51,17 +56,11 @@ export class FileService {
     });
   }
 
-  static async listFiles(dir: string = '') {
-    const targetDir = path.join(UPLOAD_DIR, dir);
-    if (!fs.existsSync(targetDir)) {
-      return [];
-    }
-
-    const hiddenDirs = ['__temp__', 'deployments', 'sites', 'user-files'];
+  static async listFiles(userId: string, dir: string = '') {
+    const targetDir = path.join(this.userDir(userId), dir);
+    if (!fs.existsSync(targetDir)) return [];
     const items = fs.readdirSync(targetDir, { withFileTypes: true });
-    return items
-      .filter(item => !(dir === '' && hiddenDirs.includes(item.name)))
-      .map(item => {
+    return items.map(item => {
       const stats = fs.statSync(path.join(targetDir, item.name));
       return {
         name: item.name,
@@ -78,8 +77,8 @@ export class FileService {
     });
   }
 
-  static async createDirectory(dir: string, name: string) {
-    const targetDir = path.join(UPLOAD_DIR, dir, name);
+  static async createDirectory(userId: string, dir: string, name: string) {
+    const targetDir = path.join(this.userDir(userId), dir, name);
     if (fs.existsSync(targetDir)) {
       throw new AppError('El directorio ya existe', 400, 'DIR_EXISTS');
     }
@@ -87,25 +86,30 @@ export class FileService {
     return { message: 'Directorio creado', path: path.join(dir, name) };
   }
 
-  static async deleteFile(filePath: string) {
-    const fullPath = path.join(UPLOAD_DIR, filePath);
+  static async deleteFile(userId: string, filePath: string) {
+    const fullPath = path.join(this.userDir(userId), filePath);
     if (!fs.existsSync(fullPath)) {
       throw new AppError('Archivo no encontrado', 404, 'FILE_NOT_FOUND');
     }
-    fs.unlinkSync(fullPath);
+    const stats = fs.statSync(fullPath);
+    if (stats.isDirectory()) {
+      fs.rmSync(fullPath, { recursive: true, force: true });
+    } else {
+      fs.unlinkSync(fullPath);
+    }
     return { message: 'Archivo eliminado' };
   }
 
-  static async readFile(filePath: string) {
-    const fullPath = path.join(UPLOAD_DIR, filePath);
+  static async readFile(userId: string, filePath: string) {
+    const fullPath = path.join(this.userDir(userId), filePath);
     if (!fs.existsSync(fullPath)) {
       throw new AppError('Archivo no encontrado', 404, 'FILE_NOT_FOUND');
     }
     return fs.readFileSync(fullPath, 'utf-8');
   }
 
-  static async writeFile(filePath: string, content: string) {
-    const fullPath = path.join(UPLOAD_DIR, filePath);
+  static async writeFile(userId: string, filePath: string, content: string) {
+    const fullPath = path.join(this.userDir(userId), filePath);
     const dir = path.dirname(fullPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -134,7 +138,6 @@ export class FileService {
   static async optimizeImage(filePath: string, quality: number = 80) {
     const fullPath = path.join(UPLOAD_DIR, filePath);
     const ext = path.extname(fullPath).toLowerCase();
-
     if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
       const outputPath = fullPath.replace(ext, '.webp');
       await sharp(fullPath).webp({ quality }).toFile(outputPath);

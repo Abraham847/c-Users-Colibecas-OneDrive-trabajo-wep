@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
-import { Key, LogIn, Copy, Check, ArrowLeft } from 'lucide-react';
+import { Key, LogIn, Copy, Check, ArrowLeft, ClipboardPaste } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -14,7 +14,7 @@ export default function LoginPage() {
   const { loginWithCode, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  if (isAuthenticated) { navigate('/dashboard'); return null; }
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
   const handleCreateCode = async () => {
     setLoading(true);
@@ -23,7 +23,10 @@ export default function LoginPage() {
       setGeneratedCode(data.data.code);
       setMode('create');
     } catch (error: any) {
-      toast.error('Error al generar código');
+      console.error('Create code error:', error);
+      const errData = error?.response?.data;
+      const errMsg = errData?.error || error?.message || errData?.message || 'Error al generar código';
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -107,7 +110,12 @@ export default function LoginPage() {
           <form onSubmit={handleUseCode} className="card space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Código de acceso</label>
-              <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="input-field text-center text-xl tracking-widest font-mono" placeholder="CH-XXXX-XXXX" required />
+              <div className="relative">
+                <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="input-field text-center text-xl tracking-widest font-mono pr-10" placeholder="CH-XXXX-XXXX" required />
+                <button type="button" onClick={async () => { const t = await navigator.clipboard.readText(); setCode(t.toUpperCase()); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-all" title="Pegar">
+                  <ClipboardPaste size={18} />
+                </button>
+              </div>
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 py-3">
               {loading ? 'Verificando...' : 'Acceder'}

@@ -44,8 +44,8 @@ router.post('/use-code', async (req: Request, res: Response) => {
     }
 
     const payload = { id: user._id.toString(), email: user.email, role: user.role, plan: user.plan };
-    const accessToken = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
-    const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, { expiresIn: config.jwt.refreshExpiresIn });
+    const accessToken = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn } as jwt.SignOptions);
+    const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, { expiresIn: config.jwt.refreshExpiresIn } as jwt.SignOptions);
 
     user.lastLogin = new Date();
     await user.save();
@@ -70,8 +70,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
       return;
     }
     const payload = { id: user._id.toString(), email: user.email, role: user.role, plan: user.plan };
-    const accessToken = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
-    const newRefreshToken = jwt.sign(payload, config.jwt.refreshSecret, { expiresIn: config.jwt.refreshExpiresIn });
+    const accessToken = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn } as jwt.SignOptions);
+    const newRefreshToken = jwt.sign(payload, config.jwt.refreshSecret, { expiresIn: config.jwt.refreshExpiresIn } as jwt.SignOptions);
     res.json({ success: true, data: { user, tokens: { accessToken, refreshToken: newRefreshToken } } });
   } catch (err) {
     res.status(401).json({ success: false, error: 'Token de actualización inválido' });

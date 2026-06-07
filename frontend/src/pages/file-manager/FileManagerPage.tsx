@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { Folder, File, Upload, Plus, Trash2, ChevronRight, ArrowLeft, Archive } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,14 +19,8 @@ export default function FileManagerPage() {
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (fileInputRef.current) {
-      fileInputRef.current.setAttribute('webkitdirectory', '');
-      fileInputRef.current.setAttribute('directory', '');
-    }
-  }, []);
+  const [directoryMode, setDirectoryMode] = useState(false);
 
   const fetchFiles = async (dir: string = '') => {
     setLoading(true);
@@ -129,7 +123,7 @@ export default function FileManagerPage() {
         <div className="flex gap-3">
           <label className="btn-secondary text-sm flex items-center gap-2 cursor-pointer">
             <Upload size={16} /> Subir
-            <input ref={fileInputRef} type="file" className="hidden" multiple onChange={handleUpload} />
+            <input type="file" className="hidden" multiple onChange={handleUpload} {...(directoryMode ? { webkitdirectory: '', directory: '' } as any : {})} />
           </label>
           <label className="btn-secondary text-sm flex items-center gap-2 cursor-pointer">
             <Archive size={16} /> ZIP
